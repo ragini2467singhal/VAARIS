@@ -1,21 +1,64 @@
+
+export const dynamic = 'force-dynamic'
+
 import { NextRequest } from 'next/server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 export async function POST(req: NextRequest) {
   try {
-    const { to, subject, html } = await req.json()
+    const apiKey = process.env.RESEND_API_KEY
+
+    if (!apiKey) {
+      return Response.json(
+        {
+          success: false,
+          error: 'RESEND_API_KEY is not configured',
+        },
+        { status: 503 }
+      )
+    }
+
+    const resend = new Resend(apiKey)
+
+    const body = await req.json()
+    const { to, subject, html } = body
+
+    const recipient = to || 'ragini2467singhal@gmail.com'
 
     const result = await resend.emails.send({
       from: 'noreply@virasat.in',
-      to: to || 'viratshishodia123@gmail.com',
+      to: recipient,
       subject: subject || 'Hello World',
-      html: html || '<p>Congrats on sending your <strong>first email</strong>!</p>'
+      html:
+        html ||
+        '<p>Congrats on sending your <strong>first email</strong>!</p>',
     })
 
-    return Response.json({ success: true, data: result })
+    if (result.error) {
+      console.error('Resend email error:', result.error)
+
+      return Response.json(
+        {
+          success: false,
+          error: result.error.message,
+        },
+        { status: 500 }
+      )
+    }
+
+    return Response.json({
+      success: true,
+      data: result.data,
+    })
   } catch (error) {
-    return Response.json({ success: false, error: String(error) }, { status: 500 })
+    console.error('Email API error:', error)
+
+    return Response.json(
+      {
+        success: false,
+        error: String(error),
+      },
+      { status: 500 }
+    )
   }
 }

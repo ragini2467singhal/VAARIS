@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     const uniqueToken = generateSecureToken(48)
     const order = parsed.data.order ?? 0
 
-    // Save to FallbackDB
+    // Create fallback nominee record
     const fallbackNominee = FallbackDB.createNominee({
       userId: currentUser.id,
       name: parsed.data.name,
@@ -92,9 +92,10 @@ export async function POST(req: NextRequest) {
       status: 'pending',
     })
 
+    // Always initialize with the correctly typed fallback record
     let createdRecord: FallbackNominee = fallbackNominee
 
-    // If MongoDB is available, also create in MongoDB
+    // Also save to MongoDB when available
     if (!isFallbackActive()) {
       try {
         const executor = await Executor.create({
@@ -110,11 +111,14 @@ export async function POST(req: NextRequest) {
           status: 'pending',
         })
 
+        // Convert MongoDB ObjectId to string.
+        // Do not assign the MongoDB document directly.
         createdRecord = {
           ...fallbackNominee,
-          _id: String(executor._id),
-          id: String(executor._id),
-        }
+          _id: executor._id.toString(),
+          id: executor._id.toString(),
+        } as FallbackNominee
+
       } catch (err) {
         console.warn('MongoDB Executor.create error:', err)
       }
@@ -130,7 +134,9 @@ export async function POST(req: NextRequest) {
       createdRecord,
       'Nominee / Executor added successfully with Shamir Key Share.'
     )
+
   } catch (err) {
+    console.error('Executor API error:', err)
     return serverError(err)
   }
 }
