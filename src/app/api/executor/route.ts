@@ -7,7 +7,8 @@ import { ok, created, unauthorized, serverError, badRequest } from '@/lib/api'
 import { sendExecutorWelcomeEmail } from '@/lib/email'
 import { generateSecureToken } from '@/lib/crypto'
 import { splitSecret } from '@/lib/shamir'
-import { FallbackDB } from '@/lib/fallbackDb'
+//import { FallbackDB } from '@/lib/fallbackDb'
+import { FallbackDB, type FallbackNominee } from '@/lib/fallbackDb'
 import { z } from 'zod'
 import { User } from '@/models/User'
 
@@ -78,7 +79,8 @@ export async function POST(req: NextRequest) {
       status: 'pending',
     })
 
-    let createdRecord = fallbackNominee
+    //let createdRecord = fallbackNominee
+    let createdRecord: FallbackNominee = fallbackNominee
 
     // If MongoDB is available, also create in MongoDB
     if (!isFallbackActive()) {
@@ -95,7 +97,11 @@ export async function POST(req: NextRequest) {
           executorShare: nomineeShamirShare,
           status: 'pending',
         })
-        createdRecord = executor
+        createdRecord = {
+        ...fallbackNominee,
+        _id: executor._id.toString(),
+        id: executor._id.toString(),
+      }
       } catch (err) {
         console.warn('MongoDB Executor.create error:', err)
       }
