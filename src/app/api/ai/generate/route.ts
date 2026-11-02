@@ -1,15 +1,18 @@
+
 export const dynamic = 'force-dynamic'
+
 import { NextRequest } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { ok, unauthorized, badRequest, serverError } from '@/lib/api'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-if (!GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not configured')
-}
-
 export async function POST(req: NextRequest) {
   try {
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+
+    if (!GEMINI_API_KEY) {
+      return serverError('GEMINI_API_KEY is not configured. Please add it to .env.local')
+    }
+
     const user = getCurrentUser()
     if (!user) return unauthorized()
 
@@ -61,7 +64,9 @@ Include:
       contents: [
         {
           parts: [
-            { text: `You are a legal expert specializing in Indian inheritance law and estate planning.\n\n${prompt}` }
+            {
+              text: `You are a legal expert specializing in Indian inheritance law and estate planning.\n\n${prompt}`
+            }
           ]
         }
       ],
@@ -79,6 +84,7 @@ Include:
 
     if (!geminiRes.ok) {
       console.error('Gemini primary model error:', geminiRes.status, await geminiRes.text())
+
       geminiRes = await fetchWithBackoff(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         payload,
@@ -89,9 +95,12 @@ Include:
     if (!geminiRes.ok) {
       const errText = await geminiRes.text()
       console.error('Gemini fallback model error:', geminiRes.status, errText)
+
       try {
         const errJson = JSON.parse(errText)
-        const userMessage = errJson?.error?.message || `AI generation failed (HTTP ${geminiRes.status})`
+        const userMessage =
+          errJson?.error?.message || `AI generation failed (HTTP ${geminiRes.status})`
+
         return serverError(userMessage)
       } catch {
         return serverError(`AI generation failed: ${geminiRes.status}`)
@@ -100,6 +109,7 @@ Include:
 
     const geminiData = await geminiRes.json()
     const generatedContent = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
+
     if (!generatedContent) {
       console.error('Gemini response missing content:', JSON.stringify(geminiData).slice(0, 500))
       return serverError('AI generation failed: empty response')
@@ -113,17 +123,27 @@ Include:
   }
 }
 
-async function fetchWithBackoff(url: string, body: any, retries = 1): Promise<Response> {
+async function fetchWithBackoff(
+  url: string,
+  body: any,
+  retries = 1
+): Promise<Response> {
   const headers = { 'Content-Type': 'application/json' }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
-    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body)
+    })
 
     if (res.ok) return res
 
     if (res.status === 429 && attempt < retries) {
       const delay = 2000
-      console.error(`Gemini rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`)
+      console.error(
+        `Gemini rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${retries + 1})`
+      )
       await new Promise(r => setTimeout(r, delay))
       continue
     }
@@ -131,5 +151,9 @@ async function fetchWithBackoff(url: string, body: any, retries = 1): Promise<Re
     return res
   }
 
-  return fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+  return fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body)
+  })
 }

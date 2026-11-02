@@ -1,16 +1,22 @@
+
 export const dynamic = 'force-dynamic'
+
 import { NextRequest } from 'next/server'
 import { connectDB, isFallbackActive } from '@/lib/db'
 import { Executor } from '@/models/Executor'
 import { getCurrentUser } from '@/lib/auth'
-import { ok, created, unauthorized, serverError, badRequest } from '@/lib/api'
+import {
+  ok,
+  created,
+  unauthorized,
+  serverError,
+  badRequest,
+} from '@/lib/api'
 import { sendExecutorWelcomeEmail } from '@/lib/email'
 import { generateSecureToken } from '@/lib/crypto'
 import { splitSecret } from '@/lib/shamir'
-//import { FallbackDB } from '@/lib/fallbackDb'
 import { FallbackDB, type FallbackNominee } from '@/lib/fallbackDb'
 import { z } from 'zod'
-import { User } from '@/models/User'
 
 const ExecutorSchema = z.object({
   name: z.string().min(1),
@@ -25,13 +31,16 @@ export async function GET() {
   try {
     const user = getCurrentUser()
     if (!user) return unauthorized()
+
     await connectDB()
 
     let executors: any[] = []
 
     if (!isFallbackActive()) {
       try {
-        executors = await Executor.find({ userId: user.id }).sort({ order: 1, createdAt: 1 }).lean()
+        executors = await Executor.find({ userId: user.id })
+          .sort({ order: 1, createdAt: 1 })
+          .lean()
       } catch (err) {
         console.warn('MongoDB Executor.find failed:', err)
       }
@@ -51,11 +60,15 @@ export async function POST(req: NextRequest) {
   try {
     const currentUser = getCurrentUser()
     if (!currentUser) return unauthorized()
+
     await connectDB()
 
     const body = await req.json()
     const parsed = ExecutorSchema.safeParse(body)
-    if (!parsed.success) return badRequest(parsed.error.errors[0].message)
+
+    if (!parsed.success) {
+      return badRequest(parsed.error.errors[0].message)
+    }
 
     // Generate Shamir Nominee Share (2-of-3 scheme)
     const secretSeed = `vaaris-vault-seed-${currentUser.id}-${Date.now()}`
@@ -79,7 +92,6 @@ export async function POST(req: NextRequest) {
       status: 'pending',
     })
 
-    //let createdRecord = fallbackNominee
     let createdRecord: FallbackNominee = fallbackNominee
 
     // If MongoDB is available, also create in MongoDB
@@ -97,11 +109,12 @@ export async function POST(req: NextRequest) {
           executorShare: nomineeShamirShare,
           status: 'pending',
         })
+
         createdRecord = {
-        ...fallbackNominee,
-        _id: executor._id.toString(),
-        id: executor._id.toString(),
-      }
+          ...fallbackNominee,
+          _id: String(executor._id),
+          id: String(executor._id),
+        }
       } catch (err) {
         console.warn('MongoDB Executor.create error:', err)
       }
@@ -113,7 +126,10 @@ export async function POST(req: NextRequest) {
       ownerName: currentUser.name,
     }).catch(console.error)
 
-    return created(createdRecord, 'Nominee / Executor added successfully with Shamir Key Share.')
+    return created(
+      createdRecord,
+      'Nominee / Executor added successfully with Shamir Key Share.'
+    )
   } catch (err) {
     return serverError(err)
   }

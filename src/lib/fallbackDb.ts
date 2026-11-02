@@ -1,6 +1,5 @@
 import fs from 'fs'
 import path from 'path'
-import { hashPasswordSync, verifyPassword } from '@/lib/auth'
 
 export interface FallbackUser {
   _id: string
