@@ -53,4 +53,7 @@ const ExecutorSchema = new Schema<ExecutorDocument>({
 ExecutorSchema.index({ userId: 1, role: 1 })
 ExecutorSchema.index({ uniqueToken: 1 })
 
-export const Executor = mongoose.models.Executor || mongoose.model<ExecutorDocument>('Executor', ExecutorSchema)
+//export const Executor = mongoose.models.Executor || mongoose.model<ExecutorDocument>('Executor', ExecutorSchema)
+export const Executor: mongoose.Model<ExecutorDocument> =
+  (mongoose.models.Executor as mongoose.Model<ExecutorDocument>) ||
+  mongoose.model<ExecutorDocument>('Executor', ExecutorSchema)

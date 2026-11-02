@@ -145,4 +145,7 @@ UserSchema.post('findOneAndUpdate', function (doc: UserDocument | null) {
   if (doc) decryptUserFields(doc)
 })
 
-export const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema)
+//export const User = mongoose.models.User || mongoose.model<UserDocument>('User', UserSchema)
+export const User: mongoose.Model<UserDocument> =
+  (mongoose.models.User as mongoose.Model<UserDocument>) ||
+  mongoose.model<UserDocument>('User', UserSchema)
