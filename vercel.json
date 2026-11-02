@@ -1,0 +1,41 @@
+{
+  "buildCommand": "npm run build",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "functions": {
+    "src/app/api/cron/checkin/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/cron/delivery/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "src/app/api/cron/waiting-period/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/checkin",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/waiting-period",
+      "schedule": "0 5 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" },
+        { "key": "X-XSS-Protection", "value": "0" }
+      ]
+    }
+  ]
+}
